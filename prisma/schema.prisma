@@ -1,0 +1,511 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ----------------------------------------------------
+// 0. AUTHENTICATION & MULTI-TENANCY
+// ----------------------------------------------------
+
+enum UserRole {
+  ADMIN
+  ASPIRANT
+}
+
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id            String      @id @default(cuid())
+  name          String?
+  email         String      @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole    @default(ASPIRANT)
+  status        UserStatus  @default(PENDING)
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+
+  // Strictly user-isolated records
+  studySessions   StudySession[]
+  mockTests       MockTest[]
+  mistakes        Mistake[]
+  dailyTasks      DailyTask[]
+  journalEntries  JournalEntry[]
+  revisionTasks   RevisionTask[]
+  pyqAttempts     PyqAttempt[]
+  answerPractices AnswerPractice[]
+  topicProgress   UserTopicProgress[]
+  planPhases      PlanPhase[]
+  customSubjects  Subject[]
+  customTopics    Topic[]
+  resources       Resource[]
+  systemSettings  SystemSettings?
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ----------------------------------------------------
+// 1. SYLLABUS HIERARCHY & USER PROGRESS
+// ----------------------------------------------------
+
+enum CategoryTier {
+  FOUNDATION
+  PRELIMS
+  MAINS
+  QUALIFYING
+}
+
+model SyllabusCategory {
+  id         String       @id @default(cuid())
+  title      String
+  subTitle   String?
+  tier       CategoryTier @default(FOUNDATION)
+  orderIndex Int          @default(0)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  subjects Subject[]
+
+  @@map("syllabus_categories")
+}
+
+model Subject {
+  id         String           @id @default(cuid())
+  name       String
+  orderIndex Int              @default(0)
+  categoryId String
+  category   SyllabusCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  // Optional userId: null = Default System Subject; string = Custom Subject per User
+  userId     String?
+  user       User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  topics          Topic[]
+  studySessions   StudySession[]
+  revisionTasks   RevisionTask[]
+  mistakes        Mistake[]
+  planPhases      PlanPhase[]
+  resources       Resource[]
+  pyqAttempts     PyqAttempt[]
+  answerPractices AnswerPractice[]
+
+  @@map("subjects")
+}
+
+model Topic {
+  id          String   @id @default(cuid())
+  title       String
+  orderIndex  Int      @default(0)
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  
+  // Optional userId: null = Standard Template Topic; string = Custom Topic created by Aspirant
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  studySessions   StudySession[]
+  revisionTasks   RevisionTask[]
+  mistakes        Mistake[]
+  resources       Resource[]
+  pyqAttempts     PyqAttempt[]
+  answerPractices AnswerPractice[]
+  userProgress    UserTopicProgress[]
+
+  @@map("topics")
+}
+
+// Isolated per-user syllabus completion tracking
+model UserTopicProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId     String
+  topic       Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+
+  @@unique([userId, topicId])
+  @@map("user_topic_progress")
+}
+
+// ----------------------------------------------------
+// 2. STUDY PLAN & TIMELINE (PER USER)
+// ----------------------------------------------------
+
+enum PlanStatus {
+  UPCOMING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model PlanPhase {
+  id                   String     @id @default(cuid())
+  userId               String
+  user                 User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                 String
+  weeks                Int        @default(2)
+  orderIndex           Int        @default(0)
+  startDate            DateTime?
+  endDate              DateTime?
+  status               PlanStatus @default(UPCOMING)
+  allocatedHoursPerDay Float      @default(4.0)
+  subjectId            String?
+  subject              Subject?   @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  @@map("plan_phases")
+}
+
+// ----------------------------------------------------
+// 3. STUDY SESSIONS & FOCUS LOGS (PER USER)
+// ----------------------------------------------------
+
+enum SessionType {
+  NEW_LEARNING
+  REVISION
+  PYQ
+  MOCK_TEST
+  ANSWER_WRITING
+  CURRENT_AFFAIRS
+  CSAT
+}
+
+model StudySession {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            DateTime    @default(now())
+  durationMinutes Int
+  sessionType     SessionType @default(NEW_LEARNING)
+  notes           String?
+  subjectId       String?
+  subject         Subject?    @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topicId         String?
+  topic           Topic?      @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@map("study_sessions")
+}
+
+// ----------------------------------------------------
+// 4. MOCK TESTS & MISTAKE NOTEBOOK (PER USER)
+// ----------------------------------------------------
+
+enum TestCategory {
+  PRELIMS_GS1
+  PRELIMS_CSAT
+  MAINS_GS
+  MAINS_ESSAY
+  OPTIONAL
+}
+
+enum MistakeReason {
+  CONCEPTUAL_CONFUSION
+  FACTUAL_GAP
+  MISREAD_QUESTION
+  SILLY_MISTAKE
+  TIME_PRESSURE
+}
+
+model MockTest {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  category     TestCategory @default(PRELIMS_GS1)
+  date         DateTime     @default(now())
+  score        Float
+  maxScore     Float        @default(200.0)
+  correctCount Int?
+  wrongCount   Int?
+  unattempted  Int?
+  notes        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  mistakes Mistake[]
+
+  @@map("mock_tests")
+}
+
+model Mistake {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionSummary String
+  reason          MistakeReason @default(CONCEPTUAL_CONFUSION)
+  correctConcept  String
+  revisionStage   Int           @default(0)
+  isArchived      Boolean       @default(false)
+  archivedAt      DateTime?
+  mockTestId      String?
+  mockTest        MockTest?     @relation(fields: [mockTestId], references: [id], onDelete: Cascade)
+  subjectId       String?
+  subject         Subject?      @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topicId         String?
+  topic           Topic?        @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("mistakes")
+}
+
+// ----------------------------------------------------
+// 5. SPACED REPETITION ENGINE (PER USER)
+// ----------------------------------------------------
+
+enum TaskSource {
+  MANUAL
+  STUDY_LOG
+  MISTAKE_BOOK
+}
+
+model RevisionTask {
+  id              String     @id @default(cuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastStudiedDate DateTime   @default(now())
+  nextDueDate     DateTime
+  intervalDays    Int        @default(3)
+  passCount       Int        @default(1)
+  isCompleted     Boolean    @default(false)
+  completedAt     DateTime?
+  notes           String?
+  source          TaskSource @default(MANUAL)
+  subjectId       String?
+  subject         Subject?   @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topicId         String?
+  topic           Topic?     @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@map("revision_tasks")
+}
+
+// ----------------------------------------------------
+// 6. DAILY REFLECTION JOURNAL (PER USER)
+// ----------------------------------------------------
+
+model JournalEntry {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date             DateTime @default(now())
+  studiedSummary   String
+  accomplishments  String?
+  obstacles        String?
+  keyLearnings     String?
+  tomorrowPlan     String?
+  confidenceRating Int      @default(4)
+  energyRating     Int      @default(4)
+  disciplineRating Int      @default(5)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("journal_entries")
+}
+
+// ----------------------------------------------------
+// 7. RESOURCES (PER USER OR SHARED)
+// ----------------------------------------------------
+
+enum ResourceType {
+  BOOK
+  PDF
+  YOUTUBE
+  DRIVE
+  CLOUDINARY
+  WEBSITE
+  NOTES
+}
+
+model Resource {
+  id         String       @id @default(cuid())
+  userId     String?
+  user       User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title      String
+  type       ResourceType @default(WEBSITE)
+  url        String?
+  sourceName String?
+  notes      String?
+  subjectId  String?
+  subject    Subject?     @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topicId    String?
+  topic      Topic?       @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@map("resources")
+}
+
+// ----------------------------------------------------
+// 8. SYSTEM SETTINGS & DAILY TASKS (PER USER)
+// ----------------------------------------------------
+
+model SystemSettings {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prelimsTargetDate DateTime  @default("2027-05-23T00:00:00.000Z")
+  mainsTargetDate   DateTime  @default("2027-09-17T00:00:00.000Z")
+  interviewDate     DateTime? @default("2028-02-15T00:00:00.000Z")
+  dailyTargetHours  Float     @default(6.0)
+  targetYear        Int       @default(2027)
+  optionalSubject   String?   @default("Sociology")
+  updatedAt         DateTime  @updatedAt
+
+  @@map("system_settings")
+}
+
+model DailyTask {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @default(now())
+  text      String
+  hours     String?  @default("1.0h")
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("daily_tasks")
+}
+
+// ----------------------------------------------------
+// 9. PREVIOUS YEAR QUESTIONS (PER USER)
+// ----------------------------------------------------
+
+enum PyqPaperType {
+  PRELIMS_GS1
+  PRELIMS_CSAT
+  MAINS_GS1
+  MAINS_GS2
+  MAINS_GS3
+  MAINS_GS4
+  OPTIONAL
+}
+
+model PyqAttempt {
+  id              String       @id @default(cuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year            Int
+  paper           PyqPaperType @default(PRELIMS_GS1)
+  totalQuestions  Int          @default(0)
+  correctCount    Int          @default(0)
+  wrongCount      Int          @default(0)
+  unattempted     Int          @default(0)
+  scoreCalculated Float        @default(0.0)
+  accuracyPct     Float        @default(0.0)
+  notes           String?
+  attemptDate     DateTime     @default(now())
+  subjectId       String?
+  subject         Subject?     @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topicId         String?
+  topic           Topic?       @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@map("pyq_attempts")
+}
+
+// ----------------------------------------------------
+// 10. MAINS ANSWER WRITING (PER USER)
+// ----------------------------------------------------
+
+enum MainsPaperType {
+  GS1
+  GS2
+  GS3
+  GS4_ETHICS
+  ESSAY
+  OPTIONAL_1
+  OPTIONAL_2
+}
+
+model AnswerPractice {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           DateTime       @default(now())
+  paper          MainsPaperType @default(GS1)
+  questionPrompt String
+  targetMarks    Int            @default(10)
+  targetWords    Int            @default(150)
+  timeTakenSecs  Int            @default(420)
+  selfScore      Float?
+  hasIntro       Boolean        @default(true)
+  hasDiagram     Boolean        @default(false)
+  hasWayForward  Boolean        @default(true)
+  strengths      String?
+  improvements   String?
+  docUrl         String?
+  subjectId      String?
+  subject        Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topicId        String?
+  topic          Topic?         @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@map("answer_practices")
+}
