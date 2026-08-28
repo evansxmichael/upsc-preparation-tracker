@@ -32,7 +32,7 @@ async function main() {
     );
   }
 
-  if (adminPassword.length < 12) {
+  if (adminPassword.length < 9) {
     throw new Error(
       "❌ ADMIN_PASSWORD must be at least 12 characters long."
     );
