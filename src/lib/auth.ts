@@ -17,10 +17,14 @@ class InvalidCredentialsError extends CredentialsSignin {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+
   session: { strategy: "jwt" },
+
   pages: {
     signIn: "/login",
   },
+
   providers: [
     Credentials({
       name: "Credentials",
@@ -28,12 +32,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
+
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new InvalidCredentialsError();
         }
 
         const email = (credentials.email as string).toLowerCase().trim();
+
         const user = await db.user.findUnique({
           where: { email },
         });
@@ -72,6 +78,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -79,14 +86,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as any).role;
         token.status = (user as any).status;
       }
+
       return token;
     },
+
     async session({ session, token }) {
       if (token && session.user) {
-        (session.user as any).id = (token.id as string) || (token.sub as string);
+        (session.user as any).id =
+          (token.id as string) || (token.sub as string);
+
         (session.user as any).role = token.role as string;
         (session.user as any).status = token.status as string;
       }
+
       return session;
     },
   },
