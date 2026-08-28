@@ -187,9 +187,9 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="space-y-6 select-none pb-28">
+    <div className="w-full min-w-0 space-y-6 select-none pb-28">
       {/* Target & Multi-Stage Countdown Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-200 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-gray-200 pb-3">
         <div>
           <span className="text-xs font-mono text-[#991b1b] uppercase tracking-wider font-semibold">
             COMMAND CENTER & EXECUTION HUB
@@ -200,21 +200,21 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3 font-mono text-xs">
-          <div className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-2xs text-right">
+          <div className="px-3.5 py-2 bg-white border border-gray-200 rounded-lg shadow-2xs text-right min-w-[110px]">
             <span className="text-[10px] text-gray-400 uppercase tracking-wider block">
               PRELIMS STAGE
             </span>
-            <span className="text-lg font-bold text-[#0f172a] leading-none">
+            <span className="text-lg font-bold text-[#0f172a] leading-tight block mt-0.5">
               {prelimsDays}{" "}
               <span className="text-[10px] font-normal text-gray-400">DAYS</span>
             </span>
           </div>
 
-          <div className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-2xs text-right">
+          <div className="px-3.5 py-2 bg-white border border-gray-200 rounded-lg shadow-2xs text-right min-w-[110px]">
             <span className="text-[10px] text-gray-400 uppercase tracking-wider block">
               MAINS STAGE
             </span>
-            <span className="text-lg font-bold text-blue-800 leading-none">
+            <span className="text-lg font-bold text-blue-800 leading-tight block mt-0.5">
               {mainsDays}{" "}
               <span className="text-[10px] font-normal text-gray-400">DAYS</span>
             </span>
@@ -223,77 +223,90 @@ export default function DashboardPage() {
       </div>
 
       {/* Primary KPI Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-mono">
-        <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-2xs space-y-1">
-          <span className="text-[11px] uppercase text-gray-500 tracking-wider">
-            Overall Syllabus
-          </span>
-          <p className="text-2xl font-serif font-bold text-[#0f172a]">
-            {data.overallProgress}%
-          </p>
-          <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-            <div
-              className="bg-[#0f172a] h-full"
-              style={{ width: `${data.overallProgress}%` }}
-            />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
+        <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-2xs flex flex-col justify-between min-h-[135px]">
+          <div>
+            <span className="text-[10px] uppercase text-gray-400 tracking-wider block mb-1">
+              Overall Syllabus
+            </span>
+            <p className="text-2xl font-serif font-bold text-[#0f172a]">
+              {data.overallProgress}%
+            </p>
           </div>
-          <span className="text-[10px] text-gray-400 block pt-0.5">
-            {data.completedTopics} of {data.totalTopics} topics complete
-          </span>
+          <div className="space-y-1 pt-2">
+            <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+              <div
+                className="bg-[#0f172a] h-full transition-all duration-300"
+                style={{ width: `${data.overallProgress}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-gray-400 block truncate">
+              {data.completedTopics} of {data.totalTopics} topics complete
+            </span>
+          </div>
         </div>
 
-        <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-2xs space-y-1">
-          <span className="text-[11px] uppercase text-gray-500 tracking-wider">
-            Today's Focus Time
-          </span>
-          <p className="text-2xl font-bold text-blue-800">
-            {data.todayHours}{" "}
-            <span className="text-xs font-normal text-gray-400">
-              / {targetCapacityHours}h
+        <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-2xs flex flex-col justify-between min-h-[135px]">
+          <div>
+            <span className="text-[10px] uppercase text-gray-400 tracking-wider block mb-1">
+              Today's Focus Time
             </span>
-          </p>
-          <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-            <div
-              className="bg-blue-800 h-full"
-              style={{ width: `${todayProgressPct}%` }}
-            />
+            <p className="text-2xl font-bold text-blue-800">
+              {data.todayHours}{" "}
+              <span className="text-xs font-normal text-gray-400">
+                / {targetCapacityHours}h
+              </span>
+            </p>
           </div>
-          <span className="text-[10px] text-gray-400 block pt-0.5">
-            {todayProgressPct}% of daily capacity target
-          </span>
+          <div className="space-y-1 pt-2">
+            <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+              <div
+                className="bg-blue-800 h-full transition-all duration-300"
+                style={{ width: `${todayProgressPct}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-gray-400 block truncate">
+              {todayProgressPct}% of daily capacity target
+            </span>
+          </div>
         </div>
 
-        <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-2xs space-y-1">
-          <span className="text-[11px] uppercase text-gray-500 tracking-wider">
-            Active Study Streak
-          </span>
-          <p className="text-2xl font-serif font-bold text-emerald-700">
-            {data.streak}{" "}
-            <span className="text-xs font-normal font-mono text-gray-400">
-              DAYS 🔥
+        <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-2xs flex flex-col justify-between min-h-[135px]">
+          <div>
+            <span className="text-[10px] uppercase text-gray-400 tracking-wider block mb-1">
+              Active Study Streak
             </span>
-          </p>
-          <span className="text-[10px] text-emerald-800 font-semibold block pt-2">
+            <p className="text-2xl font-serif font-bold text-emerald-700 flex items-center gap-1.5">
+              <span>{data.streak}</span>
+              <span className="text-xs font-normal font-mono text-gray-400">
+                DAYS
+              </span>
+              <span>🔥</span>
+            </p>
+          </div>
+          <span className="text-[10px] text-emerald-800 font-semibold block pt-2 truncate">
             Consistency: Active
           </span>
         </div>
 
-        <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-2xs space-y-1">
-          <span className="text-[11px] uppercase text-gray-500 tracking-wider">
-            Mock Performance
-          </span>
-          <p className="text-2xl font-serif font-bold text-[#991b1b]">
-            {data.avgMockScore}%
-          </p>
-          <span className="text-[10px] text-gray-400 block pt-2">
-            Across {data.mockCount} tests logged in DB
+        <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-2xs flex flex-col justify-between min-h-[135px]">
+          <div>
+            <span className="text-[10px] uppercase text-gray-400 tracking-wider block mb-1">
+              Mock Performance
+            </span>
+            <p className="text-2xl font-serif font-bold text-[#991b1b]">
+              {data.avgMockScore}%
+            </p>
+          </div>
+          <span className="text-[10px] text-gray-400 block pt-2 truncate">
+            Across {data.mockCount} recorded tests
           </span>
         </div>
       </div>
 
       {/* Main Execution Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg p-5 shadow-2xs space-y-4">
+        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-lg p-5 shadow-2xs space-y-4 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
             <div className="flex items-center gap-3">
               <button
@@ -337,16 +350,16 @@ export default function DashboardPage() {
                   >
                     <div
                       onClick={() => handleToggleTask(task)}
-                      className="flex items-center gap-3 flex-1 cursor-pointer"
+                      className="flex items-center gap-3 flex-1 cursor-pointer min-w-0 pr-2"
                     >
                       <input
                         type="checkbox"
                         checked={task.completed}
                         onChange={() => {}}
-                        className="h-4 w-4 rounded border-gray-300 text-[#0f172a] cursor-pointer"
+                        className="h-4 w-4 shrink-0 rounded border-gray-300 text-[#0f172a] cursor-pointer"
                       />
                       <span
-                        className={`text-xs md:text-sm font-sans ${
+                        className={`text-xs md:text-sm font-sans truncate ${
                           task.completed
                             ? "text-gray-400 line-through"
                             : "text-gray-800 font-medium"
@@ -356,7 +369,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3 font-mono text-xs text-gray-400">
+                    <div className="flex items-center gap-3 font-mono text-xs text-gray-400 shrink-0">
                       <span>{task.hours}</span>
                       <button
                         onClick={() => handleDeleteTask(task.id)}
@@ -384,11 +397,11 @@ export default function DashboardPage() {
                   placeholder="1.0h"
                   value={newTaskHours}
                   onChange={(e) => setNewTaskHours(e.target.value)}
-                  className="w-16 px-2 py-1.5 bg-[#fbfbf9] border border-gray-200 rounded text-center focus:outline-hidden"
+                  className="w-16 px-2 py-1.5 bg-[#fbfbf9] border border-gray-200 rounded text-center focus:outline-hidden shrink-0"
                 />
                 <button
                   type="submit"
-                  className="px-3.5 py-1.5 bg-[#0f172a] text-white rounded hover:bg-black font-semibold cursor-pointer"
+                  className="px-3.5 py-1.5 bg-[#0f172a] text-white rounded hover:bg-black font-semibold cursor-pointer shrink-0"
                 >
                   Add
                 </button>
@@ -442,9 +455,9 @@ export default function DashboardPage() {
                     key={t.id}
                     className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg text-xs"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 ${
                           t.completed
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             : "bg-red-50 text-red-700 border border-red-200"
@@ -453,7 +466,7 @@ export default function DashboardPage() {
                         {t.completed ? "✓ DONE" : "✗ MISSED"}
                       </span>
                       <span
-                        className={`font-sans ${
+                        className={`font-sans truncate ${
                           t.completed ? "text-gray-500 line-through" : "text-gray-800 font-medium"
                         }`}
                       >
@@ -461,7 +474,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3 font-mono text-gray-400">
+                    <div className="flex items-center gap-3 font-mono text-gray-400 shrink-0">
                       <span>{new Date(t.date).toLocaleDateString()}</span>
                       <span>•</span>
                       <span>{t.hours}</span>
@@ -480,7 +493,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Right 1 Col: Revisions & Quick Actions */}
-        <div className="space-y-4">
+        <div className="space-y-4 min-w-0">
           <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-2xs space-y-3">
             <div className="flex justify-between items-center border-b border-gray-100 pb-2">
               <h4 className="font-serif font-bold text-gray-900 text-base">
